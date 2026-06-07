@@ -1,0 +1,130 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "./generated/prisma/client"
+}
+
+enum Role {
+  ATHLETE
+  BRAND_REPRESENTATIVE
+  ADMIN
+}
+
+enum DealStatus {
+  DRAFT
+  NEGOTIATING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum ContractStatus {
+  PENDING
+  SIGNED
+  VOID
+}
+
+model Brand {
+  id            String   @id @default(uuid())
+  brandName      String
+  contactPerson  String?
+  email          String   @unique
+  phone          String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  deals          Deal[]
+  contracts      Contract[]
+}
+
+model Deal {
+  id                 String   @id @default(uuid())
+  brandId            String
+  title              String
+  dealValue          Float
+  amountReceived     Float   @default(0)
+  pendingAmount      Float   @default(0)
+  startDate          DateTime
+  endDate            DateTime
+  expectedPaymentDate DateTime
+  status             DealStatus @default(DRAFT)
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  userId             String
+  user               User    @relation(name:"AthleteDeals", fields:[userId], references:[id])
+  brand              Brand   @relation(fields: [brandId], references: [id])
+  followUps          FollowUp[]
+}
+
+// Extend existing User model with relations
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(ATHLETE)
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deals        Deal[]   @relation("AthleteDeals")
+  brands       Brand[]
+  contracts    Contract[] @relation("UserContracts")
+}
+
+
+
+model Contract {
+  id                String   @id @default(uuid())
+  brandId           String
+  userId            String
+  title             String
+  fileName          String
+  fileType          String
+  fileSize          Int
+  cloudinaryUrl     String
+  cloudinaryPublicId String
+  uploadDate        DateTime @default(now())
+  expiryDate        DateTime
+  status            String @default("Active")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  brand   Brand @relation(fields: [brandId], references: [id])
+  user    User  @relation(name:"UserContracts", fields: [userId], references: [id])
+  analysis ContractAnalysis?
+}
+
+model ContractAnalysis {
+  id                 String   @id @default(uuid())
+  contractId         String   @unique
+  brandName          String?
+  contractValue      String?
+  startDate          String?
+  endDate            String?
+  paymentTerms       String?
+  renewalClause      String?
+  terminationClause  String?
+  deliverables       String?
+  sponsorshipType    String?
+  importantDeadlines String?
+  rawAiResponse      String
+  createdAt          DateTime @default(now())
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+}
+
+model FollowUp {
+  id        String   @id @default(uuid())
+  dealId    String
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+}
