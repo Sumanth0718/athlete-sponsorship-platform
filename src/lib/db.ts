@@ -6,7 +6,19 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const connectionString = `${process.env.DATABASE_URL || "postgresql://dummy:dummy@dummy/dummy"}`;
+let connectionString = `${process.env.DATABASE_URL || "postgresql://dummy:dummy@dummy/dummy"}`;
+
+// Silence pg security warning regarding SSL modes in newer versions
+if (
+  (connectionString.includes("sslmode=require") ||
+   connectionString.includes("sslmode=prefer") ||
+   connectionString.includes("sslmode=verify-ca")) &&
+  !connectionString.includes("uselibpqcompat=")
+) {
+  const separator = connectionString.includes("?") ? "&" : "?";
+  connectionString = `${connectionString}${separator}uselibpqcompat=true`;
+}
+
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 

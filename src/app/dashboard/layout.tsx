@@ -13,7 +13,6 @@ import {
   X,
   LogOut,
   User as UserIcon,
-  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -36,7 +35,6 @@ export default function DashboardLayout({
 
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
     { name: "Brands", href: "/dashboard/brands", icon: Briefcase },
     { name: "Deals", href: "/dashboard/deals", icon: Handshake },
     { name: "Contracts", href: "/dashboard/contracts", icon: FileText },
