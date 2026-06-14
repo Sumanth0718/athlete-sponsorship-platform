@@ -70,14 +70,8 @@ The **Athlete Sponsorship Management Platform** is a full-stack Next.js applicat
 
 Here are some screenshots of the application in action:
 
-### 1. Dashboard Overview
-![Dashboard Overview](./public/screenshots/media__1780852779247.png)
+### 1. Landing Page
+![Landing Page](./public/screenshots/landing_page.png)
 
-### 2. Deals Management & Pipeline
-![Deals Pipeline](./public/screenshots/media__1781096492509.png)
-
-### 3. Contract Vault & AI Analyzer
-![Contract Vault](./public/screenshots/media__1781097347846.png)
-
-### 4. AI Follow-Up Generator
-![AI Follow-Up Generator](./public/screenshots/media__1781097762638.png)
+### 2. Dashboard Overview
+![Dashboard Overview](./public/screenshots/dashboard_overview.png)
