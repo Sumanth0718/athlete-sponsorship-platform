@@ -4,7 +4,7 @@ The **Athlete Sponsorship Management Platform** is a full-stack Next.js applicat
 
 ## Features
 
-- **Dashboard Analytics**: Real-time financial metrics, including Monthly Revenue Trends, Deal Status Distribution, and Pending vs Received amounts via Recharts.
+- **Dashboard Overview**: Real-time metrics overview of pipeline value, active sponsorships, total contracts, and partner brands.
 - **Brand Management**: Centralized contact directory for sponsors and brand representatives.
 - **Deals Pipeline**: A Kanban-style board to track sponsorships from `DRAFT` to `COMPLETED`.
 - **Contract Vault**: Securely upload and store PDF/DOCX contracts powered by Cloudinary.
@@ -14,7 +14,7 @@ The **Athlete Sponsorship Management Platform** is a full-stack Next.js applicat
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15 (App Router), React 19, TailwindCSS, Shadcn UI, Recharts
+- **Frontend**: Next.js 15 (App Router), React 19, TailwindCSS, Shadcn UI
 - **Backend**: Next.js Server Actions & Route Handlers
 - **Database**: PostgreSQL (Neon) via Prisma ORM
 - **Authentication**: Auth.js v5 (Credentials Provider)
@@ -66,9 +66,18 @@ The **Athlete Sponsorship Management Platform** is a full-stack Next.js applicat
    ```
    Access the app at `http://localhost:3000`.
 
-## Deployment Steps (Vercel)
+## Screenshots
 
-1. Connect your GitHub repository to Vercel.
-2. In Vercel Project Settings > Environment Variables, securely add all variables from the `.env` setup.
-3. The `package.json` includes a `"postinstall": "prisma generate"` script which ensures the Prisma client is built on Vercel's servers.
-4. Deploy the application! Upon the first successful deployment, ensure you run `npx prisma db push` against your production database to synchronize the schema.
+Here are some screenshots of the application in action:
+
+### 1. Dashboard Overview
+![Dashboard Overview](./public/screenshots/media__1780852779247.png)
+
+### 2. Deals Management & Pipeline
+![Deals Pipeline](./public/screenshots/media__1781096492509.png)
+
+### 3. Contract Vault & AI Analyzer
+![Contract Vault](./public/screenshots/media__1781097347846.png)
+
+### 4. AI Follow-Up Generator
+![AI Follow-Up Generator](./public/screenshots/media__1781097762638.png)
