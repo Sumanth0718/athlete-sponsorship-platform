@@ -27,7 +27,7 @@ The **Athlete Sponsorship Management Platform** is a full-stack Next.js applicat
 - Node.js 18+
 - PostgreSQL Database (e.g., Neon or Supabase)
 - Cloudinary Account
-- OpenAI API Key
+  
 
 ### Local Setup
 
