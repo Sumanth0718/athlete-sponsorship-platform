@@ -26,7 +26,7 @@ The **Athlete Sponsorship Management Platform** is a full-stack Next.js applicat
 ### Prerequisites
 - Node.js 18+
 - PostgreSQL Database (e.g., Neon or Supabase)
-- Cloudinary Account
+  
   
 
 ### Local Setup
