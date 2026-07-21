@@ -16,11 +16,10 @@ import {
   Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-export const dynamic = "force-dynamic";
-
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -29,12 +28,16 @@ export default async function DashboardPage() {
   const isBrandRep = session.user.role === "BRAND_REPRESENTATIVE";
 
   if (isBrandRep) {
-    const athletes = await getAthletes();
-    const campaigns = await getBrandCampaigns();
-    const contracts = await getContracts(userId);
+    const rawAthletes = (await getAthletes().catch(() => [])) || [];
+    const rawCampaigns = (await getBrandCampaigns().catch(() => [])) || [];
+    const rawContracts = (await getContracts(userId).catch(() => [])) || [];
 
-    const totalBudget = campaigns.reduce((acc, curr) => acc + curr.budget, 0);
-    const activeCampaigns = campaigns.filter((c) => c.status === "ACTIVE");
+    const athletes = Array.isArray(rawAthletes) ? rawAthletes : [];
+    const campaigns = Array.isArray(rawCampaigns) ? rawCampaigns : [];
+    const contracts = Array.isArray(rawContracts) ? rawContracts : [];
+
+    const totalBudget = campaigns.reduce((acc, curr) => acc + (Number(curr?.budget) || 0), 0);
+    const activeCampaigns = campaigns.filter((c) => c && c.status === "ACTIVE");
 
     return (
       <div className="space-y-8 animate-in fade-in duration-500">
@@ -120,7 +123,7 @@ export default async function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-slate-100">{contracts.length || 3}</div>
+              <div className="text-2xl font-bold text-slate-100">{contracts.length}</div>
               <p className="text-xs text-slate-500 mt-1">Legally binding agreements</p>
             </CardContent>
           </Card>
@@ -158,7 +161,7 @@ export default async function DashboardPage() {
                         <td className="py-3.5 px-2 font-medium text-slate-200">{camp.title}</td>
                         <td className="py-3.5 px-2 text-purple-400 font-medium">{camp.athleteName}</td>
                         <td className="py-3.5 px-2 text-emerald-400 font-semibold">
-                          ${camp.budget.toLocaleString()}
+                          ${(Number(camp.budget) || 0).toLocaleString()}
                         </td>
                         <td className="py-3.5 px-2">
                           <Badge
@@ -220,19 +223,23 @@ export default async function DashboardPage() {
   }
 
   // ATHLETE VIEW (Default)
-  const deals = await getDeals(userId);
-  const brands = await getBrands(userId);
-  const contracts = await getContracts(userId);
+  const rawDeals = (await getDeals(userId).catch(() => [])) || [];
+  const rawBrands = (await getBrands(userId).catch(() => [])) || [];
+  const rawContracts = (await getContracts(userId).catch(() => [])) || [];
 
-  const activeDeals = deals.filter((d) => d.status === "ACTIVE");
+  const deals = Array.isArray(rawDeals) ? rawDeals : [];
+  const brands = Array.isArray(rawBrands) ? rawBrands : [];
+  const contracts = Array.isArray(rawContracts) ? rawContracts : [];
+
+  const activeDeals = deals.filter((d) => d && d.status === "ACTIVE");
   const totalValue = deals
-    .filter((d) => d.status === "ACTIVE" || d.status === "NEGOTIATING")
-    .reduce((acc, curr) => acc + curr.value, 0);
+    .filter((d) => d && (d.status === "ACTIVE" || d.status === "NEGOTIATING"))
+    .reduce((acc, curr) => acc + (Number(curr?.value) || 0), 0);
 
   const totalContracts = contracts.length;
-  const activeContracts = contracts.filter((c) => c.status === "Active");
-  const expiringContracts = contracts.filter((c) => c.status === "Expiring Soon");
-  const expiredContracts = contracts.filter((c) => c.status === "Expired");
+  const activeContracts = contracts.filter((c) => c && c.status === "Active");
+  const expiringContracts = contracts.filter((c) => c && c.status === "Expiring Soon");
+  const expiredContracts = contracts.filter((c) => c && c.status === "Expired");
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -357,9 +364,9 @@ export default async function DashboardPage() {
                   {deals.slice(0, 5).map((deal) => (
                     <tr key={deal.id} className="hover:bg-slate-800/20 transition-all duration-150">
                       <td className="py-3.5 px-2 font-medium text-slate-200">{deal.title}</td>
-                      <td className="py-3.5 px-2 text-slate-400">{deal.brand?.name}</td>
+                      <td className="py-3.5 px-2 text-slate-400">{deal.brand?.name || "Brand Partner"}</td>
                       <td className="py-3.5 px-2 text-emerald-400 font-semibold">
-                        ${deal.value.toLocaleString()}
+                        ${(Number(deal.value) || 0).toLocaleString()}
                       </td>
                       <td className="py-3.5 px-2">
                         <Badge
@@ -397,7 +404,7 @@ export default async function DashboardPage() {
               >
                 <div>
                   <h4 className="text-sm font-semibold text-slate-200">{brand.name}</h4>
-                  <p className="text-xs text-slate-500">{brand.industry}</p>
+                  <p className="text-xs text-slate-500">{brand.industry || "Sponsor"}</p>
                 </div>
                 <Link href={`/dashboard/brands`}>
                   <Button variant="ghost" size="sm" className="h-8 text-blue-400 hover:bg-slate-800">
@@ -417,4 +424,3 @@ export default async function DashboardPage() {
     </div>
   );
 }
-
