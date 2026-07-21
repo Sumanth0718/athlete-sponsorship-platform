@@ -33,12 +33,21 @@ export default function DashboardLayout({
     role: "ATHLETE",
   };
 
-  const navItems = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Brands", href: "/dashboard/brands", icon: Briefcase },
-    { name: "Deals", href: "/dashboard/deals", icon: Handshake },
-    { name: "Contracts", href: "/dashboard/contracts", icon: FileText },
-  ];
+  const isBrandRep = user.role === "BRAND_REPRESENTATIVE";
+
+  const navItems = isBrandRep
+    ? [
+        { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { name: "Athlete Directory", href: "/dashboard/brands", icon: UserIcon },
+        { name: "Campaign Deals", href: "/dashboard/deals", icon: Handshake },
+        { name: "Issued Contracts", href: "/dashboard/contracts", icon: FileText },
+      ]
+    : [
+        { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { name: "Partner Brands", href: "/dashboard/brands", icon: Briefcase },
+        { name: "My Deals", href: "/dashboard/deals", icon: Handshake },
+        { name: "Contracts", href: "/dashboard/contracts", icon: FileText },
+      ];
 
   const handleLogout = async () => {
     await signOut({ redirect: false });

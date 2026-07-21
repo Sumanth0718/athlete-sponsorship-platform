@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { db } from "@/lib/db";
 import { uploadContractFile } from "@/lib/cloudinary";
+import { createContract } from "@/lib/services";
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,8 +38,6 @@ export async function POST(req: NextRequest) {
        return NextResponse.json({ error: "Invalid expiry date." }, { status: 400 });
     }
 
-    // Calculate status dynamically based on expiry Date, though it might just be better to let the schema default or calculate on the fly when reading. The user rules say: "If expiryDate > 30 days Active, If expiryDate <= 30 days Expiring Soon, If expiryDate < today Expired"
-    // We'll set it here initially:
     const now = new Date();
     const diffTime = expiryDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -50,27 +48,25 @@ export async function POST(req: NextRequest) {
       status = "Expiring Soon";
     }
 
-    // Convert File to Buffer for Cloudinary
+    // Convert File to Buffer for storage
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Upload to Cloudinary
+    // Upload file
     const { url, publicId } = await uploadContractFile(buffer, file.name, file.type);
 
-    // Save metadata
-    const contract = await db.contract.create({
-      data: {
-        brandId,
-        userId: session.user.id,
-        title,
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        cloudinaryUrl: url,
-        cloudinaryPublicId: publicId,
-        expiryDate,
-        status,
-      },
+    // Save contract metadata via service layer (DB & dynamic fallback)
+    const contract = await createContract({
+      brandId,
+      userId: session.user.id,
+      title,
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+      cloudinaryUrl: url,
+      cloudinaryPublicId: publicId,
+      expiryDate,
+      status,
     });
 
     return NextResponse.json({ success: true, contract }, { status: 201 });

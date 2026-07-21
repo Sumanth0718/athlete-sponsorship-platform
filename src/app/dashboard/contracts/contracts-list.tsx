@@ -81,21 +81,56 @@ export function ContractsList({ initialContracts, brands }: { initialContracts: 
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const handleFileChange = (selectedFile: File | null) => {
+    setFile(selectedFile);
+    if (selectedFile) {
+      setError("");
+      // 1. Auto title from file name
+      if (!title) {
+        const cleanName = selectedFile.name
+          .replace(/\.[^/.]+$/, "")
+          .replace(/[-_]/g, " ")
+          .replace(/\b\w/g, (l) => l.toUpperCase());
+        setTitle(cleanName);
+      }
+
+      // 2. Auto match brand by name in file
+      if (!brandId && brands.length > 0) {
+        const lowerName = selectedFile.name.toLowerCase();
+        const matched = brands.find((b) => lowerName.includes(b.name.toLowerCase()));
+        setBrandId(matched ? matched.id : brands[0].id);
+      }
+
+      // 3. Auto default expiry date (1 year from today)
+      if (!expiryDate) {
+        const nextYear = new Date();
+        nextYear.setFullYear(nextYear.getFullYear() + 1);
+        setExpiryDate(nextYear.toISOString().split("T")[0]);
+      }
+    }
+  };
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !title || !brandId || !expiryDate) {
-      setError("Please fill all fields and select a file.");
+    if (!file) {
+      setError("Please select a contract document (PDF or DOCX).");
       return;
     }
+
+    const finalTitle = title || file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+    const finalBrandId = brandId || (brands[0]?.id || "brand-1");
+    const defaultExpiry = new Date();
+    defaultExpiry.setFullYear(defaultExpiry.getFullYear() + 1);
+    const finalExpiryDate = expiryDate || defaultExpiry.toISOString().split("T")[0];
     
     setUploading(true);
     setError("");
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("title", title);
-    formData.append("brandId", brandId);
-    formData.append("expiryDate", expiryDate);
+    formData.append("title", finalTitle);
+    formData.append("brandId", finalBrandId);
+    formData.append("expiryDate", finalExpiryDate);
 
     try {
       const res = await fetch("/api/contracts", {
@@ -118,11 +153,14 @@ export function ContractsList({ initialContracts, brands }: { initialContracts: 
       // Update local state temporarily until refresh completes
       const newContract: Contract = {
         ...data.contract,
-        brand: { name: brands.find(b => b.id === brandId)?.name || "" },
+        brand: { name: brands.find(b => b.id === finalBrandId)?.name || "Partner Brand" },
         uploadDate: new Date(data.contract.uploadDate),
         expiryDate: new Date(data.contract.expiryDate)
       };
       setContracts([newContract, ...contracts]);
+
+      // Automatically trigger AI analysis dialog for the uploaded contract!
+      openAnalysis(newContract);
       
     } catch (err: any) {
       setError(err.message);
@@ -266,9 +304,9 @@ export function ContractsList({ initialContracts, brands }: { initialContracts: 
       <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
         <DialogContent className="sm:max-w-[425px] bg-slate-900 border-slate-800 text-slate-200">
           <DialogHeader>
-            <DialogTitle>Upload Contract</DialogTitle>
+            <DialogTitle>Upload & Auto-Analyze Contract</DialogTitle>
             <DialogDescription className="text-slate-400 text-xs mt-1">
-              Upload a signed PDF or DOCX agreement. Max size 10MB.
+              Select a PDF or DOCX file to automatically detect details and extract AI legal insights.
             </DialogDescription>
           </DialogHeader>
           
@@ -278,22 +316,39 @@ export function ContractsList({ initialContracts, brands }: { initialContracts: 
                 {error}
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label htmlFor="file">Document (PDF/DOCX)</Label>
+              <Input 
+                id="file" 
+                type="file" 
+                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                className="bg-slate-950/80 border-slate-800 text-slate-200 focus:border-blue-500 rounded-xl cursor-pointer file:text-slate-300"
+                onChange={e => handleFileChange(e.target.files?.[0] || null)}
+              />
+            </div>
             
             <div className="space-y-2">
-              <Label htmlFor="title">Contract Title</Label>
+              <Label htmlFor="title" className="flex justify-between text-xs">
+                <span>Contract Title</span>
+                <span className="text-slate-500 text-[10px]">Auto-Detected</span>
+              </Label>
               <Input 
                 id="title" 
-                placeholder="e.g. 2026 Sponsorship Agreement" 
-                className="bg-slate-950/80 border-slate-800 text-slate-200 focus:border-blue-500 rounded-xl"
+                placeholder="Auto-detected from file" 
+                className="bg-slate-950/80 border-slate-800 text-slate-200 focus:border-blue-500 rounded-xl text-sm"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="brand">Partner Brand</Label>
+              <Label htmlFor="brand" className="flex justify-between text-xs">
+                <span>Partner Brand</span>
+                <span className="text-slate-500 text-[10px]">Auto-Matched</span>
+              </Label>
               <Select value={brandId} onValueChange={(v) => setBrandId(v || "")}>
-                <SelectTrigger className="bg-slate-950/80 border-slate-800 text-slate-200 focus:border-blue-500 rounded-xl">
+                <SelectTrigger className="bg-slate-950/80 border-slate-800 text-slate-200 focus:border-blue-500 rounded-xl text-sm">
                   <SelectValue placeholder="Select brand" />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
@@ -305,24 +360,16 @@ export function ContractsList({ initialContracts, brands }: { initialContracts: 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="expiry">Expiry Date</Label>
+              <Label htmlFor="expiry" className="flex justify-between text-xs">
+                <span>Expiry Date</span>
+                <span className="text-slate-500 text-[10px]">Auto-Defaulted</span>
+              </Label>
               <Input 
                 id="expiry" 
                 type="date"
-                className="bg-slate-950/80 border-slate-800 text-slate-200 focus:border-blue-500 rounded-xl"
+                className="bg-slate-950/80 border-slate-800 text-slate-200 focus:border-blue-500 rounded-xl text-sm"
                 value={expiryDate}
                 onChange={e => setExpiryDate(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="file">Document (PDF/DOCX)</Label>
-              <Input 
-                id="file" 
-                type="file" 
-                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                className="bg-slate-950/80 border-slate-800 text-slate-200 focus:border-blue-500 rounded-xl cursor-pointer file:text-slate-300"
-                onChange={e => setFile(e.target.files?.[0] || null)}
               />
             </div>
 
@@ -332,7 +379,7 @@ export function ContractsList({ initialContracts, brands }: { initialContracts: 
               </Button>
               <Button type="submit" disabled={uploading} className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl">
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-                {uploading ? "Uploading..." : "Upload File"}
+                {uploading ? "Analyzing..." : "Upload & Analyze"}
               </Button>
             </DialogFooter>
           </form>

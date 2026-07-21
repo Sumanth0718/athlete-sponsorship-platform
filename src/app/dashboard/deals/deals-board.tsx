@@ -168,17 +168,16 @@ export function DealsBoard({ initialDeals, brands }: { initialDeals: Deal[]; bra
                             <XCircle className="h-3.5 w-3.5" />
                           </Button>
                         )}
-                        {deal.pendingAmount > 0 && deal.status !== "DRAFT" && deal.status !== "NEGOTIATING" && deal.status !== "CANCELLED" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => openFollowUp(deal)}
-                            className="h-7 w-7 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg"
-                            title="Generate Follow-Up Email"
-                          >
-                            <Sparkles className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openFollowUp(deal)}
+                          className="h-7 px-2 text-[10px] text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg flex items-center"
+                          title="Generate AI Follow-Up Email"
+                        >
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          Follow-Up
+                        </Button>
                         {col.id !== "COMPLETED" && (
                           <Button
                             size="sm"

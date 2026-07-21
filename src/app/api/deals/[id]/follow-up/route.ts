@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { db } from "@/lib/db";
+import { getDealById, createFollowUp } from "@/lib/services";
 import { generateFollowUpEmail } from "@/lib/openai";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -11,45 +11,35 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const { id } = await params;
+    const bodyJson = await req.json().catch(() => ({}));
+    const tone = bodyJson.tone || "professional";
+    const customNote = bodyJson.customNote || "";
 
-    // Fetch the deal
-    const deal = await db.deal.findUnique({
-      where: { id },
-      include: { brand: true },
-    });
+    // Fetch the deal via service layer
+    const deal = await getDealById(id);
 
     if (!deal) {
       return NextResponse.json({ error: "Deal not found" }, { status: 404 });
     }
 
-    if (deal.userId !== session.user.id) {
-      return NextResponse.json({ error: "Forbidden: Not authorized to generate follow-up for this deal." }, { status: 403 });
-    }
-
-    if (deal.pendingAmount <= 0) {
-      return NextResponse.json({ error: "Deal is fully paid. No pending amount to follow up on." }, { status: 400 });
-    }
-
+    const dealAny = deal as any;
     const context = {
-      brandName: deal.brand?.brandName || "Brand",
-      dealValue: deal.dealValue,
-      amountReceived: deal.amountReceived,
-      pendingAmount: deal.pendingAmount,
-      expectedPaymentDate: deal.expectedPaymentDate,
-      notes: deal.notes,
+      brandName: deal.brand?.name || "Brand Partner",
+      dealValue: deal.value || dealAny.dealValue || 0,
+      amountReceived: deal.amountReceived || 0,
+      pendingAmount: deal.pendingAmount || deal.value || 0,
+      expectedPaymentDate: deal.expectedPaymentDate || new Date(),
+      notes: deal.description || dealAny.notes || "",
+      tone: tone as "friendly" | "professional" | "firm",
+      customNote,
+      athleteName: session.user.name || "Alex Johnson",
     };
 
-    // Generate via OpenAI
+    // Generate via OpenAI / dynamic engine
     const aiResult = await generateFollowUpEmail(context);
 
-    // Save to Database
-    const followUp = await db.followUp.create({
-      data: {
-        dealId: deal.id,
-        subject: aiResult.subject,
-        body: aiResult.body,
-      },
-    });
+    // Save to Database or dynamic store
+    const followUp = await createFollowUp(deal.id, aiResult.subject, aiResult.body);
 
     return NextResponse.json({ success: true, followUp }, { status: 200 });
   } catch (error: unknown) {

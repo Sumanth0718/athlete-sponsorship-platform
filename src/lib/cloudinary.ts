@@ -23,6 +23,27 @@ export async function uploadContractFile(
   fileName: string,
   fileType: string
 ): Promise<{ url: string; publicId: string }> {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || "";
+  const apiKey = process.env.CLOUDINARY_API_KEY || "";
+  const isPlaceholder = !cloudName || !apiKey || apiKey.includes("your_api_key") || cloudName.includes("your_cloud_name");
+
+  if (isPlaceholder) {
+    const fs = await import("fs");
+    const path = await import("path");
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "contracts");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    const cleanFileName = `${Date.now()}_${fileName.replace(/[^a-zA-Z0-9_.-]/g, "_")}`;
+    const filePath = path.join(uploadDir, cleanFileName);
+    fs.writeFileSync(filePath, fileBuffer);
+
+    return {
+      url: `/uploads/contracts/${cleanFileName}`,
+      publicId: `local_${cleanFileName}`,
+    };
+  }
+
   getCloudinaryConfig();
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(

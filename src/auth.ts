@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { DYNAMIC_USERS } from "@/lib/services";
 import bcrypt from "bcryptjs";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -29,53 +30,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             where: { email },
           });
 
-          if (!user) {
-            // Check in-memory fallback user if DB is not available
-            if (email === "athlete@example.com" && password === "password123") {
+          if (user) {
+            const passwordsMatch = await bcrypt.compare(password, user.passwordHash);
+            if (passwordsMatch) {
               return {
-                id: "mock-athlete-id",
-                name: "Alex Johnson",
-                email: "athlete@example.com",
-                role: "ATHLETE",
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
               };
             }
-            if (email === "brand@example.com" && password === "password123") {
-              return {
-                id: "mock-brand-id",
-                name: "Nike Deals Team",
-                email: "brand@example.com",
-                role: "BRAND_REPRESENTATIVE",
-              };
-            }
-            return null;
-          }
-
-          const passwordsMatch = await bcrypt.compare(password, user.passwordHash);
-          if (passwordsMatch) {
-            return {
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              role: user.role,
-            };
           }
         } catch (error) {
-          console.error("Auth database query failed, using mock fallbacks:", error);
-          // Fallback to mock accounts if database is not reachable/configured yet
-          if (email === "athlete@example.com" && password === "password123") {
+          console.error("Auth database query failed, using dynamic fallbacks:", error);
+        }
+
+        // Check dynamic user registry (mock accounts & newly registered accounts)
+        const memUser = DYNAMIC_USERS.find(
+          (u) => u.email.toLowerCase() === email.toLowerCase()
+        );
+        if (memUser) {
+          const passwordsMatch = await bcrypt.compare(password, memUser.passwordHash);
+          if (passwordsMatch) {
             return {
-              id: "mock-athlete-id",
-              name: "Alex Johnson",
-              email: "athlete@example.com",
-              role: "ATHLETE",
-            };
-          }
-          if (email === "brand@example.com" && password === "password123") {
-            return {
-              id: "mock-brand-id",
-              name: "Nike Deals Team",
-              email: "brand@example.com",
-              role: "BRAND_REPRESENTATIVE",
+              id: memUser.id,
+              name: memUser.name,
+              email: memUser.email,
+              role: memUser.role,
             };
           }
         }

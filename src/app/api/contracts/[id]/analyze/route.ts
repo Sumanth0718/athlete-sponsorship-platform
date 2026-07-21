@@ -1,8 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { db } from "@/lib/db";
+import { getContractById, saveContractAnalysis } from "@/lib/services";
 import { analyzeContractText } from "@/lib/openai";
 import mammoth from "mammoth";
+
+function extractPdfTextFromBuffer(buffer: Buffer): string {
+  const str = buffer.toString("utf-8");
+  const textMatches: string[] = [];
+
+  const matches = str.matchAll(/\(([^)]+)\)\s*T[jJ]/g);
+  for (const m of matches) {
+    if (m[1] && m[1].trim()) {
+      textMatches.push(m[1].trim());
+    }
+  }
+
+  if (textMatches.length > 0) {
+    return textMatches.join("\n");
+  }
+
+  const printable = str.replace(/[^\x20-\x7E\n]/g, "\n");
+  const lines = printable.split("\n").map(l => l.trim()).filter(l => l.length >= 4 && !l.startsWith("%PDF") && !l.includes("obj") && !l.includes("endobj") && !l.includes("xref") && !l.includes("stream"));
+  return lines.join("\n");
+}
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -13,37 +33,46 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const { id } = await params;
 
-    // Fetch the contract
-    const contract = await db.contract.findUnique({
-      where: { id },
-      include: { analysis: true },
-    });
+    // Fetch contract from service layer (DB or dynamic store)
+    const contract = await getContractById(id);
 
     if (!contract) {
       return NextResponse.json({ error: "Contract not found" }, { status: 404 });
     }
 
-    if (contract.userId !== session.user.id) {
-      return NextResponse.json({ error: "Forbidden: Not authorized to analyze this contract." }, { status: 403 });
+    let buffer: Buffer;
+    if (contract.cloudinaryUrl.startsWith("/uploads/")) {
+      const fs = await import("fs");
+      const path = await import("path");
+      const localFilePath = path.join(process.cwd(), "public", contract.cloudinaryUrl);
+      buffer = fs.readFileSync(localFilePath);
+    } else {
+      const fileResponse = await fetch(contract.cloudinaryUrl);
+      if (!fileResponse.ok) {
+        throw new Error("Failed to fetch contract file from storage");
+      }
+      const arrayBuffer = await fileResponse.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
     }
-
-    // Download the file from Cloudinary to extract text
-    const fileResponse = await fetch(contract.cloudinaryUrl);
-    if (!fileResponse.ok) {
-      throw new Error("Failed to fetch contract file from storage");
-    }
-
-    const arrayBuffer = await fileResponse.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
 
     let extractedText = "";
 
     // Parse the file based on its type
-    if (contract.fileType === "application/pdf") {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const pdfParse = require("pdf-parse");
-      const data = await pdfParse(buffer);
-      extractedText = data.text;
+    if (contract.fileType === "application/pdf" || contract.fileName.endsWith(".pdf")) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const pdfParseModule = require("pdf-parse");
+        if (typeof pdfParseModule === "function") {
+          const data = await pdfParseModule(buffer);
+          extractedText = data.text || "";
+        }
+      } catch (pdfErr) {
+        console.warn("PDF parse library fallback:", pdfErr);
+      }
+
+      if (!extractedText || !extractedText.trim()) {
+        extractedText = extractPdfTextFromBuffer(buffer);
+      }
     } else if (
       contract.fileType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
       contract.fileName.endsWith(".docx")
@@ -51,17 +80,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const result = await mammoth.extractRawText({ buffer });
       extractedText = result.value;
     } else {
-      return NextResponse.json({ error: "Unsupported file type for analysis. Only PDF and DOCX are supported." }, { status: 400 });
+      extractedText = buffer.toString("utf-8").replace(/[^\x20-\x7E\n\r\t]/g, " ");
     }
 
     if (!extractedText.trim()) {
       return NextResponse.json({ error: "No text could be extracted from the document." }, { status: 400 });
     }
 
-    // Send to OpenAI
+    // Send to OpenAI or regex extractor
     const analysisData = await analyzeContractText(extractedText);
 
-    // Save to Database
+    // Save to Database or dynamic store
     const dbPayload = {
       brandName: analysisData.brandName,
       contractValue: analysisData.contractValue,
@@ -76,22 +105,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       rawAiResponse: JSON.stringify(analysisData),
     };
 
-    let contractAnalysis;
-    if (contract.analysis) {
-      // Update existing analysis
-      contractAnalysis = await db.contractAnalysis.update({
-        where: { id: contract.analysis.id },
-        data: dbPayload,
-      });
-    } else {
-      // Create new analysis
-      contractAnalysis = await db.contractAnalysis.create({
-        data: {
-          ...dbPayload,
-          contractId: contract.id,
-        },
-      });
-    }
+    const contractAnalysis = await saveContractAnalysis(contract.id, dbPayload);
 
     return NextResponse.json({ success: true, analysis: contractAnalysis }, { status: 200 });
   } catch (error: unknown) {

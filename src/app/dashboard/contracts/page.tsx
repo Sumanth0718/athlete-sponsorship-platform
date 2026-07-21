@@ -36,14 +36,18 @@ export default async function ContractsPage() {
     name: b.name
   }));
 
+  const isBrandRep = session.user.role === "BRAND_REPRESENTATIVE";
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>
         <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">
-          Contracts Manager
+          {isBrandRep ? "Issued Contracts & Compliance" : "Contracts Manager"}
         </h1>
         <p className="text-slate-400 mt-1">
-          Review legal terms, manage documents, and track contract expiry dates.
+          {isBrandRep
+            ? "Manage endorsement agreements issued to athletes, legal terms, and contract expirations."
+            : "Review legal terms, manage documents, and track contract expiry dates."}
         </p>
       </div>
 

@@ -39,14 +39,18 @@ export default async function DealsPage() {
     name: b.name,
   }));
 
+  const isBrandRep = session.user.role === "BRAND_REPRESENTATIVE";
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>
         <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">
-          Sponsorship Deals
+          {isBrandRep ? "Campaign Sponsorship Offers" : "Sponsorship Deals"}
         </h1>
         <p className="text-slate-400 mt-1">
-          Review, negotiate, and advance status of sponsorships through the pipeline.
+          {isBrandRep
+            ? "Review, send offers, and advance athlete endorsement campaigns through the pipeline."
+            : "Review, negotiate, and advance status of sponsorships through the pipeline."}
         </p>
       </div>
 
