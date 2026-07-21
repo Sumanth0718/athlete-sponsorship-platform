@@ -6,6 +6,8 @@ import { DYNAMIC_USERS } from "@/lib/services";
 import bcrypt from "bcryptjs";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "fallback-secret-key-32-chars-minimum-nextauth",
   providers: [
     Credentials({
       name: "credentials",

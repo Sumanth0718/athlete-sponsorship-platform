@@ -9,11 +9,13 @@ export default auth((req) => {
   const isAuthRoute = nextUrl.pathname === "/login" || nextUrl.pathname === "/register";
 
   if (isDashboardRoute && !isAuthenticated) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    const loginUrl = new URL("/login", req.url);
+    return NextResponse.redirect(loginUrl);
   }
 
   if (isAuthRoute && isAuthenticated) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    const dashboardUrl = new URL("/dashboard", req.url);
+    return NextResponse.redirect(dashboardUrl);
   }
 
   return NextResponse.next();
