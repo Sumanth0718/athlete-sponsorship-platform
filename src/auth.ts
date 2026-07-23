@@ -6,8 +6,27 @@ import { db } from "@/lib/db";
 import { DYNAMIC_USERS } from "@/lib/services";
 import bcrypt from "bcryptjs";
 
+// Force NextAuth to trust the host and use the public Render URL
+// to avoid "UntrustedHost" and "localhost:10000" callback URL bugs on Render.
+process.env.AUTH_TRUST_HOST = "true";
+if (!process.env.AUTH_URL) {
+  process.env.AUTH_URL = "https://athlete-sponsorship-platform.onrender.com";
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  debug: true,
+  logger: {
+    error(code, metadata) {
+      console.error("NEXTAUTH_ERROR:", code, metadata);
+    },
+    warn(code) {
+      console.warn("NEXTAUTH_WARN:", code);
+    },
+    debug(code, metadata) {
+      console.log("NEXTAUTH_DEBUG:", code, metadata);
+    }
+  },
   providers: [
     Credentials({
       name: "credentials",
