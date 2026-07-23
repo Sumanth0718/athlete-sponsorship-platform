@@ -6,7 +6,7 @@ const { auth } = NextAuth(authConfig);
 
 export const proxy = auth((req) => {
   const { nextUrl } = req;
-  const isAuthenticated = !!req.auth;
+  const isAuthenticated = !!req.auth?.user;
 
   const isDashboardRoute = nextUrl.pathname.startsWith("/dashboard");
   const isAuthRoute = nextUrl.pathname === "/login" || nextUrl.pathname === "/register";
