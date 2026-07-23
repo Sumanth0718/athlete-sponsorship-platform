@@ -11,6 +11,11 @@ const isPlaceholder = !rawConnStr || rawConnStr.includes("hostname") || rawConnS
 
 function getClient(): PrismaClient {
   let connectionString = rawConnStr;
+  
+  if (connectionString === "postgresql://neondb_owner:npg_fXIL2ghZSj8U@ep-soft-unit-adl672ps.c-2.us-east-1.aws.neon.tech/athlete_sponsorship?sslmode=require") {
+    connectionString = "postgresql://neondb_owner:npg_fXIL2ghZSj8U@ep-soft-unit-adl672ps.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&schema=athlete_sponsorship&options=-c%20search_path=athlete_sponsorship";
+  }
+
   if (!connectionString || isPlaceholder) {
     connectionString = "postgresql://dummy:dummy@localhost:5432/dummy";
   } else if (
