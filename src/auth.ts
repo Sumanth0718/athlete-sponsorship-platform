@@ -15,18 +15,6 @@ if (!process.env.AUTH_URL) {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  debug: true,
-  logger: {
-    error(code, metadata) {
-      console.error("NEXTAUTH_ERROR:", code, metadata);
-    },
-    warn(code) {
-      console.warn("NEXTAUTH_WARN:", code);
-    },
-    debug(code, metadata) {
-      console.log("NEXTAUTH_DEBUG:", code, metadata);
-    }
-  },
   providers: [
     Credentials({
       name: "credentials",
