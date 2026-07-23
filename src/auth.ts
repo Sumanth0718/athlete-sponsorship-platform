@@ -3,7 +3,6 @@ import { authConfig } from "./auth.config";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { DYNAMIC_USERS } from "@/lib/services";
 import bcrypt from "bcryptjs";
 
 // Force NextAuth to trust the host and use the public Render URL
@@ -11,6 +10,9 @@ import bcrypt from "bcryptjs";
 process.env.AUTH_TRUST_HOST = "true";
 if (!process.env.AUTH_URL) {
   process.env.AUTH_URL = "https://athlete-sponsorship-platform.onrender.com";
+}
+if (!process.env.AUTH_SECRET) {
+  process.env.AUTH_SECRET = "e9a26372332cfae8bf691456d953926fef09dbf0a719bd99b9cf9bcfd964f434";
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -51,23 +53,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
           }
         } catch (error) {
-          console.error("Auth database query failed, using dynamic fallbacks:", error);
-        }
-
-        // Check dynamic user registry (mock accounts & newly registered accounts)
-        const memUser = DYNAMIC_USERS.find(
-          (u) => u.email.toLowerCase() === email.toLowerCase()
-        );
-        if (memUser) {
-          const passwordsMatch = await bcrypt.compare(password, memUser.passwordHash);
-          if (passwordsMatch) {
-            return {
-              id: memUser.id,
-              name: memUser.name,
-              email: memUser.email,
-              role: memUser.role,
-            };
-          }
+          console.error("Auth database query failed:", error);
         }
 
         return null;
