@@ -25,7 +25,23 @@ function getClient(): PrismaClient {
 
   try {
     const pool = new Pool({ connectionString, connectionTimeoutMillis: 2000 });
-    const adapter = new PrismaPg(pool);
+    
+    let schema = "public";
+    if (connectionString && !isPlaceholder) {
+      try {
+        const parsedUrl = new URL(connectionString);
+        schema = parsedUrl.searchParams.get("schema") || "public";
+        pool.on("connect", (client) => {
+          client.query(`SET search_path TO ${schema};`).catch((e) => {
+            console.error("Failed to set search_path on connect:", e);
+          });
+        });
+      } catch (err) {
+        console.warn("Failed to parse DATABASE_URL searchParams:", err);
+      }
+    }
+
+    const adapter = new PrismaPg(pool, { schema });
     return new PrismaClient({ adapter });
   } catch (e) {
     const pool = new Pool({ connectionString: "postgresql://dummy:dummy@localhost:5432/dummy" });

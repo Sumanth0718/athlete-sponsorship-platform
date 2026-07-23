@@ -1,13 +1,33 @@
 // prisma/seed.ts
+import "dotenv/config";
 import { PrismaClient } from "./generated/prisma/client/client";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
+
 import bcrypt from "bcryptjs";
 
 const connectionString = `${process.env.DATABASE_URL || "postgresql://dummy:dummy@dummy/dummy"}`;
 const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+
+// Parse and set the PostgreSQL schema (search_path) automatically
+if (process.env.DATABASE_URL) {
+  try {
+    const parsedUrl = new URL(process.env.DATABASE_URL);
+    const schema = parsedUrl.searchParams.get("schema") || "public";
+    pool.on("connect", (client) => {
+      client.query(`SET search_path TO ${schema};`).catch((e) => {
+        console.error("Failed to set search_path in seed.ts:", e);
+      });
+    });
+  } catch (err) {
+    console.warn("Failed to parse DATABASE_URL in seed.ts:", err);
+  }
+}
+
+const parsedUrl = new URL(connectionString);
+const schema = parsedUrl.searchParams.get("schema") || "public";
+const adapter = new PrismaPg(pool, { schema });
+const prisma = new PrismaClient({ adapter, log: ["query"] });
 
 async function main() {
   const hashed = await bcrypt.hash("password123", 10);
